@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpsMind</title>
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --text:#1d2330; --muted:#6b7280; --accent:#2f6fed; --user:#2f6fed; --bot:#eef1f6; --border:#e3e6eb; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#12151b; --card:#1b1f27; --text:#e7e9ee; --muted:#9aa3b2; --accent:#5b8cff; --user:#3b6fe0; --bot:#252a34; --border:#2c323d; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 16px; height: 100vh; display:flex; flex-direction:column; gap:12px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    h1 { font-size: 1.3rem; margin:0; }
+    select { padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:0.95rem; }
+    #desc { color:var(--muted); font-size:0.9rem; margin:0; }
+    #chat { flex:1; overflow-y:auto; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .msg { max-width: 85%; padding:10px 14px; border-radius:12px; white-space:pre-wrap; line-height:1.45; }
+    .user { align-self:flex-end; background:var(--user); color:#fff; }
+    .bot { align-self:flex-start; background:var(--bot); }
+    #samples { display:flex; gap:8px; flex-wrap:wrap; }
+    .chip { border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:999px; padding:6px 12px; cursor:pointer; font-size:0.85rem; }
+    .chip:hover { border-color:var(--accent); }
+    form { display:flex; gap:8px; }
+    input { flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--card); color:var(--text); font-size:1rem; min-width:0; }
+    button[type=submit] { padding:12px 18px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+    button:disabled { opacity:0.5; cursor:default; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🧠 OpsMind</h1>
+      <select id="industry" aria-label="Choose industry"></select>
+    </header>
+    <p id="desc"></p>
+    <div id="chat"></div>
+    <div id="samples"></div>
+    <form id="form">
+      <input id="input" placeholder="Ask a question..." autocomplete="off" required>
+      <button type="submit" id="send">Send</button>
+    </form>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let industries = [];
+  let history = [];   // the whole conversation: [{role, content}]
+
+  function addBubble(role, text) {
+    const div = document.createElement("div");
+    div.className = "msg " + (role === "user" ? "user" : "bot");
+    div.textContent = text;
+    $("chat").appendChild(div);
+    $("chat").scrollTop = $("chat").scrollHeight;
+    return div;
+  }
+
+  function showIndustry() {
+    const ind = industries.find(i => i.id === $("industry").value);
+    $("desc").textContent = ind.description;
+    $("samples").innerHTML = "";
+    ind.sample_questions.forEach(q => {
+      const b = document.createElement("button");
+      b.className = "chip"; b.type = "button"; b.textContent = q;
+      b.onclick = () => ask(q);
+      $("samples").appendChild(b);
+    });
+    history = [];          // new industry = new conversation
+    $("chat").innerHTML = "";
+  }
+
+  async function ask(question) {
+    $("send").disabled = true;
+    addBubble("user", question);
+    history.push({ role: "user", content: question });
+    const bubble = addBubble("assistant", "...");
+    let answer = "";
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ industry_id: $("industry").value, messages: history }),
+      });
+      if (!res.ok) throw new Error("Server error " + res.status);
+      // Read the answer piece by piece (streaming)
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        answer += decoder.decode(value, { stream: true });
+        bubble.textContent = answer;
+        $("chat").scrollTop = $("chat").scrollHeight;
+      }
+      history.push({ role: "assistant", content: answer || "(no answer)" });
+    } catch (err) {
+      bubble.textContent = "Error: " + err.message;
+      history.pop();       // remove the question that failed
+    } finally {
+      $("send").disabled = false;
+    }
+  }
+
+  $("form").onsubmit = (e) => {
+    e.preventDefault();
+    const q = $("input").value.trim();
+    if (!q) return;
+    $("input").value = "";
+    ask(q);
+  };
+  $("industry").onchange = showIndustry;
+
+  fetch("/api/industries").then(r => r.json()).then(list => {
+    industries = list;
+    list.forEach(i => {
+      const o = document.createElement("option");
+      o.value = i.id; o.textContent = i.icon + " " + i.name;
+      $("industry").appendChild(o);
+    });
+    showIndustry();
+  });
+</script>
+</body>
+</html>

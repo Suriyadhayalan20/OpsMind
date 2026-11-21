@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+
+  # Added in Step 3 (RAG): Postgres with pgvector for storing document pieces.
+  # db:
+  #   image: pgvector/pgvector:pg16
+  #   environment:
+  #     POSTGRES_USER: opsmind
+  #     POSTGRES_PASSWORD: opsmind
+  #     POSTGRES_DB: opsmind
+  #   ports:
+  #     - "5432:5432"
