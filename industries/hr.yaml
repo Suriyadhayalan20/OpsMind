@@ -14,3 +14,16 @@ sample_questions:
 tools:            # built in Step 6
   - apply_leave
   - get_leave_balance
+
+# ---- Step 2: ticket classifier ----
+ticket_categories:
+  leave: Applying for leave, leave balance, or leave approval
+  salary: Salary, payslip, deductions, or bonus
+  benefits: Insurance, reimbursements, or other benefits
+  policy: Company rules, working hours, or notice period
+  resignation: Resigning, relieving letter, or full and final settlement
+ticket_examples:
+  - text: "My salary for this month is not credited yet and my EMI is due tomorrow."
+    result: {category: salary, priority: high, sentiment: negative, summary: "Employee's monthly salary is not credited and a loan EMI is due tomorrow.", needs_human: true}
+  - text: "How many sick leaves do I have left this year?"
+    result: {category: leave, priority: low, sentiment: neutral, summary: "Employee asks for their remaining sick leave balance.", needs_human: false}

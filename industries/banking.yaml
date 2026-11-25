@@ -16,3 +16,16 @@ tools:            # built in Step 6
   - check_loan_eligibility
   - calculate_emi
   - block_card
+
+# ---- Step 2: ticket classifier ----
+ticket_categories:
+  card: Debit or credit card problems, block or replace a card
+  loan: Loan application, EMI, interest, or loan closure
+  account: Opening, closing, KYC, or account details
+  transaction: Failed, pending, or wrong transfers and payments
+  fraud: Unknown transactions, scams, or a hacked account
+ticket_examples:
+  - text: "Someone used my debit card for Rs 25,000 that I never spent! Block it now!!"
+    result: {category: fraud, priority: urgent, sentiment: negative, summary: "Customer reports an unknown Rs 25,000 debit card payment and wants the card blocked.", needs_human: true}
+  - text: "What is the interest rate for a personal loan?"
+    result: {category: loan, priority: low, sentiment: neutral, summary: "Customer asks about the personal loan interest rate.", needs_human: false}

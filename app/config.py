@@ -15,14 +15,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 
-    # Which AI to use: "claude" (paid, best) or "ollama" (free, runs on your computer)
-    llm_provider: Literal["claude", "ollama"] = "claude"
+    # Which AI to use: "claude" (paid, best), "gemini" (free plan, cloud), or "ollama" (free, your computer)
+    llm_provider: Literal["claude", "gemini", "ollama"] = "claude"
 
     # Claude settings
     anthropic_api_key: str | None = None  # if empty, the SDK reads ANTHROPIC_API_KEY itself
     llm_model: str = "claude-opus-5-5"
     llm_effort: str = "medium"  # low | medium | high  (more effort = smarter but slower/costlier)
     llm_max_tokens: int = 16000
+
+    # Gemini settings (free key: https://aistudio.google.com/apikey)
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-flash-latest"  # always points to Google's newest fast "Flash" model
 
     # Ollama settings
     ollama_url: str = "http://localhost:11434"

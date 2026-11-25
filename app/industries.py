@@ -20,6 +20,9 @@ class Industry(BaseModel):
     sample_questions: list[str] = Field(default_factory=list)
     # Tools the AI will use for this industry. Built in Step 6 (agents).
     tools: list[str] = Field(default_factory=list)
+    # Step 2: ticket classifier. {category_name: description} + a few worked examples.
+    ticket_categories: dict[str, str] = Field(default_factory=dict)
+    ticket_examples: list[dict] = Field(default_factory=list)
 
 
 def load_industries(folder: Path) -> dict[str, Industry]:

@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
+from app.classifier import ClassificationError, ClassifyResponse, classify_ticket
 from app.config import BASE_DIR, settings
 from app.industries import Industry, load_industries
 from app.llm import ChatModel, LLMError, create_chat_model
@@ -70,6 +71,11 @@ class ChatRequest(BaseModel):
 @app.get("/")
 def home() -> FileResponse:
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+@app.get("/classify")
+def classify_page() -> FileResponse:
+    return FileResponse(BASE_DIR / "static" / "classify.html")
 
 
 @app.get("/health")
@@ -134,3 +140,45 @@ async def chat(
             yield "\n[Error: Something went wrong. Please try again.]"
 
     return StreamingResponse(generate(), media_type="text/plain; charset=utf-8")
+
+
+# ---------- Step 2: ticket classifier ----------
+
+class ClassifyRequest(BaseModel):
+    industry_id: str
+    text: str = Field(min_length=3, max_length=5000)
+
+
+@app.post("/api/classify", response_model=ClassifyResponse)
+async def classify(
+    req: ClassifyRequest,
+    industries: dict[str, Industry] = Depends(get_industries),
+    model: ChatModel = Depends(get_chat_model),
+) -> ClassifyResponse:
+    industry = industries.get(req.industry_id)
+    if industry is None:
+        raise HTTPException(status_code=404, detail=f"Unknown industry '{req.industry_id}'")
+    if not industry.ticket_categories:
+        raise HTTPException(status_code=400, detail=f"Industry '{industry.id}' has no ticket_categories")
+
+    try:
+        response = await classify_ticket(model, industry, req.text, provider=settings.llm_provider)
+    # 502 = "the service behind me (the AI) failed", not our app.
+    except LLMError as e:
+        raise HTTPException(status_code=502, detail=e.user_message) from None
+    except ClassificationError as e:
+        log.warning("classify failed: %s", e)
+        raise HTTPException(status_code=502, detail="The AI gave an invalid answer. Please try again.") from None
+    except anthropic.AuthenticationError:
+        raise HTTPException(status_code=502, detail="AI service login failed. Check the API key in .env") from None
+    except anthropic.APIError:
+        raise HTTPException(status_code=502, detail="AI service returned an error. Please try again.") from None
+    except TypeError:
+        raise HTTPException(status_code=502, detail="No API key found. Add it to .env") from None
+
+    r = response.result
+    log.info(
+        "classify industry=%s category=%s priority=%s attempts=%d latency_ms=%d",
+        industry.id, r.category, r.priority, response.attempts, response.latency_ms,
+    )
+    return response

@@ -16,3 +16,16 @@ tools:            # built in Step 6
   - track_order
   - create_refund_request
   - check_product_photo
+
+# ---- Step 2: ticket classifier ----
+ticket_categories:
+  order_tracking: Where is my order, delivery status, or delay
+  return_refund: Returning a product or asking about a refund
+  damaged_product: Product arrived broken, wrong, or missing parts
+  payment: Payment failed, charged twice, or coupon problems
+  account: Login, password, address, or profile problems
+ticket_examples:
+  - text: "I ordered a phone 10 days ago and it still shows 'shipped'. Where is it?"
+    result: {category: order_tracking, priority: medium, sentiment: negative, summary: "Customer's phone order has been stuck in 'shipped' status for 10 days.", needs_human: false}
+  - text: "Thanks for the quick delivery! How do I return the shoes if they don't fit?"
+    result: {category: return_refund, priority: low, sentiment: positive, summary: "Happy customer asks how to return shoes that may not fit.", needs_human: false}

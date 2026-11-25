@@ -16,3 +16,16 @@ tools:            # built in Step 6
   - create_claim
   - get_claim_status
   - check_damage_photo
+
+# ---- Step 2: ticket classifier ----
+ticket_categories:
+  claim: Making a new claim or asking about an existing claim
+  policy: Coverage, renewal, or changes to a policy
+  payment: Premium payments, refunds, or billing
+  document: Policy papers, certificates, or uploading documents
+  complaint: Unhappy with service, an agent, or a decision
+ticket_examples:
+  - text: "My car was hit yesterday, rear bumper is broken. How do I claim?"
+    result: {category: claim, priority: high, sentiment: neutral, summary: "Customer wants to start a claim for a rear bumper damaged in an accident.", needs_human: false}
+  - text: "Can I get a copy of my policy certificate by email?"
+    result: {category: document, priority: low, sentiment: neutral, summary: "Customer asks for a copy of the policy certificate by email.", needs_human: false}
